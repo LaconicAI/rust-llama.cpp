@@ -60,7 +60,7 @@ pub struct PredictOptions {
     pub mirostat_tau: f32,
     pub penalize_nl: bool,
     pub logit_bias: String,
-    pub token_callback: Option<Box<dyn Fn(String) -> bool + Send + 'static>>,
+    pub token_callback: Option<Box<dyn Fn(u8) -> bool + Send + 'static>>,
     // pub token_callback: Option<fn(String) -> bool>,
     pub path_prompt_cache: String,
     pub m_lock: bool,
@@ -190,7 +190,7 @@ impl PredictOptions {
 
     pub fn set_token_callback(
         &mut self,
-        token_callback: Option<Box<dyn Fn(String) -> bool + Send + 'static>>,
+        token_callback: Option<Box<dyn Fn(u8) -> bool + Send + 'static>>,
     ) {
         self.token_callback = token_callback;
     }

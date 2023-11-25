@@ -15,7 +15,7 @@ pub mod options;
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
 lazy_static! {
-    static ref CALLBACKS: Mutex<HashMap<usize, Box<dyn Fn(String) -> bool + Send + 'static>>> =
+    static ref CALLBACKS: Mutex<HashMap<usize, Box<dyn Fn(u8) -> bool + Send + 'static>>> =
         Mutex::new(HashMap::new());
 }
 
@@ -382,10 +382,7 @@ impl LLama {
         }
     }
 
-    pub fn set_token_callback(
-        &self,
-        callback: Option<Box<dyn Fn(String) -> bool + Send + 'static>>,
-    ) {
+    pub fn set_token_callback(&self, callback: Option<Box<dyn Fn(u8) -> bool + Send + 'static>>) {
         set_callback(self.state, callback);
     }
 
@@ -398,7 +395,7 @@ impl LLama {
         if opts.tokens == 0 {
             opts.tokens = 99999999;
         }
-        
+
         if let Some(callback) = opts.token_callback {
             set_callback(self.state, Some(callback));
         }
@@ -506,10 +503,7 @@ impl Drop for LLama {
     }
 }
 
-fn set_callback(
-    state: *mut c_void,
-    callback: Option<Box<dyn Fn(String) -> bool + Send + 'static>>,
-) {
+fn set_callback(state: *mut c_void, callback: Option<Box<dyn Fn(u8) -> bool + Send + 'static>>) {
     let mut callbacks = CALLBACKS.lock().unwrap();
 
     if let Some(callback) = callback {
@@ -524,11 +518,9 @@ extern "C" fn tokenCallback(state: *mut c_void, token: *const c_char) -> bool {
     let mut callbacks = CALLBACKS.lock().unwrap();
 
     if let Some(callback) = callbacks.get_mut(&(state as usize)) {
-        let c_str: &CStr = unsafe { CStr::from_ptr(token) };
-        let str_slice: &str = c_str.to_str().unwrap();
-        let string: String = str_slice.to_owned();
+        let token_u8 = token as u8;
 
-        return callback(string);
+        return callback(token_u8);
     }
 
     true
