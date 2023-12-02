@@ -15,7 +15,7 @@ pub mod options;
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
 lazy_static! {
-    static ref CALLBACKS: Mutex<HashMap<usize, Box<dyn Fn(i8) -> bool + Send + 'static>>> =
+    static ref CALLBACKS: Mutex<HashMap<usize, Box<dyn Fn(String) -> bool + Send + 'static>>> =
         Mutex::new(HashMap::new());
 }
 
@@ -382,7 +382,10 @@ impl LLama {
         }
     }
 
-    pub fn set_token_callback(&self, callback: Option<Box<dyn Fn(i8) -> bool + Send + 'static>>) {
+    pub fn set_token_callback(
+        &self,
+        callback: Option<Box<dyn Fn(String) -> bool + Send + 'static>>,
+    ) {
         set_callback(self.state, callback);
     }
 
@@ -503,7 +506,10 @@ impl Drop for LLama {
     }
 }
 
-fn set_callback(state: *mut c_void, callback: Option<Box<dyn Fn(i8) -> bool + Send + 'static>>) {
+fn set_callback(
+    state: *mut c_void,
+    callback: Option<Box<dyn Fn(String) -> bool + Send + 'static>>,
+) {
     let mut callbacks = CALLBACKS.lock().unwrap();
 
     if let Some(callback) = callback {
@@ -517,8 +523,12 @@ fn set_callback(state: *mut c_void, callback: Option<Box<dyn Fn(i8) -> bool + Se
 extern "C" fn tokenCallback(state: *mut c_void, token: *const c_char) -> bool {
     let mut callbacks = CALLBACKS.lock().unwrap();
 
+    let c_str = unsafe { CStr::from_ptr(token) };
+
+    let rust_str = c_str.to_string_lossy().into_owned();
+
     if let Some(callback) = callbacks.get_mut(&(state as usize)) {
-        return callback(token as i8);
+        return callback(rust_str);
     }
 
     true
